@@ -1,0 +1,44 @@
+# Базовая конфигурация
+spring:
+  application:
+    name: booking-service
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
+# Springdoc OpenAPI (Swagger)
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+
+# Server
+server:
+  port: 8001
+
+# RabbitMQ Rebus Integration
+rabbitmq:
+  rebus:
+    sender-address: booking-service
+    content-type: application/json;charset=utf-8
+    intent: pub
+    # Константы Rebus headers
+    header-msg-type: rbs2-msg-type
+    header-msg-id: rbs2-msg-id
+    header-content-type: rbs2-content-type
+    header-intent: rbs2-intent
+    header-sender-address: rbs2-sender-address
+    message-types:
+      # Команды (исходящие в Catalog Service)
+      create-booking-job: BookingService.Catalog.Async.Api.Contracts.Requests.CreateBookingJobRequest, BookingService.Catalog.Async.Api.Contracts
+      cancel-booking-job: BookingService.Catalog.Async.Api.Contracts.Requests.CancelBookingJobByRequestIdRequest, BookingService.Catalog.Async.Api.Contracts
+      # События (входящие от Catalog Service)
+      booking-job-confirmed: BookingService.Catalog.Async.Api.Contracts.Events.BookingJobConfirmed, BookingService.Catalog.Async.Api.Contracts
+      booking-job-denied: BookingService.Catalog.Async.Api.Contracts.Events.BookingJobDenied, BookingService.Catalog.Async.Api.Contracts

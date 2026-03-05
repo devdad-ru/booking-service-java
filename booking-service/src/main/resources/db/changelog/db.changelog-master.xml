@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="1" author="booking-service">
+        <comment>Создание таблицы bookings</comment>
+
+        <createTable tableName="bookings">
+            <column name="id" type="BIGSERIAL" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="status" type="INTEGER">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="resource_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="booked_from" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="booked_to" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="catalog_request_id" type="UUID"/>
+        </createTable>
+
+        <createIndex indexName="idx_bookings_status" tableName="bookings">
+            <column name="status"/>
+        </createIndex>
+
+        <createIndex indexName="idx_bookings_user_id" tableName="bookings">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_bookings_resource_id" tableName="bookings">
+            <column name="resource_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog>

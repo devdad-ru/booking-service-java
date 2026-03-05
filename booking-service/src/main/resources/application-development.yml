@@ -1,0 +1,77 @@
+# Logging
+logging:
+  level:
+    root: INFO
+    com.booking.service: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.cloud.stream: DEBUG
+
+# Development конфигурация
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/booking_service
+    username: booking_admin
+    password: admin_booking
+
+  jpa:
+    open-in-view: false
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # RabbitMQ Configuration
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: admin
+    password: admin
+
+  # Spring Cloud Stream + RabbitMQ
+  cloud:
+    function:
+      # Определение всех функций (consumers): основной + DLQ
+      definition: bookingEvents;cancelBookingErrors
+    stream:
+      bindings:
+        # Outbound: команды в Catalog Service
+        createBookingJob-out-0:
+          destination: booking-service-topics
+          content-type: application/json
+        cancelBookingJob-out-0:
+          destination: booking-service-topics
+          content-type: application/json
+        # Inbound: события от Catalog Service
+        bookingEvents-in-0:
+          destination: booking-service-topics
+          group: booking-service-booking-queue
+          content-type: application/json
+        # Inbound: DLQ для ошибок отмены (Rebus DLQ от Catalog Service)
+        cancelBookingErrors-in-0:
+          destination: booking-service-catalog-direct
+          group: booking-service-catalog-error-queue
+          content-type: application/json
+      rabbit:
+        binder:
+          connection-name-prefix: booking-service
+        bindings:
+          createBookingJob-out-0:
+            producer:
+              exchange-type: topic
+              routing-key-expression: "headers['${rabbitmq.rebus.header-msg-type}']"
+          cancelBookingJob-out-0:
+            producer:
+              exchange-type: topic
+              routing-key-expression: "headers['${rabbitmq.rebus.header-msg-type}']"
+          bookingEvents-in-0:
+            consumer:
+              exchange-type: topic
+              binding-routing-key: 'BookingService.Catalog.Async.Api.Contracts.Events.#'
+          cancelBookingErrors-in-0:
+            consumer:
+              # Rebus DLQ использует direct exchange с routing key 'error'
+              exchange-type: direct
+              binding-routing-key: 'error'
+              # Не реплицируем ошибки повторно (уже в DLQ)
+              republish-to-dlq: false

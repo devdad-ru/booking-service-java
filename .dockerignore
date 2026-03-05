@@ -1,0 +1,34 @@
+# IDE
+**/.idea
+**/.vscode
+**/.eclipse
+**/.classpath
+**/.project
+**/.settings
+
+# Build artifacts
+**/target
+**/bin
+**/build/out
+**/target/out
+
+# Git
+**/.git
+**/.gitignore
+
+# Docker
+**/docker-compose*
+!docker-compose.yml
+
+# Dependencies
+**/.m2
+**/node_modules
+
+# Logs
+**/*.log
+
+# Other
+**/.env
+**/secrets.dev.yaml
+README.md
+LICENSE
