@@ -44,6 +44,13 @@ public class Booking {
     @Column(name = "catalog_request_id")
     private UUID catalogRequestId;
 
+    @Enumerated(EnumType.ORDINAL)
+    @Column(name = "previous_status")
+    private BookingStatus previousStatus;
+
+    @Column(name = "cancellation_sent_at")
+    private OffsetDateTime cancellationSentAt;
+
     /**
      * Factory method для создания нового бронирования с валидацией бизнес-правил
      */
@@ -116,5 +123,44 @@ public class Booking {
             default:
                 throw new BusinessException("Некорректный статус для отмены");
         }
+    }
+
+    /**
+     * Начать отмену бронирования (переход в промежуточный статус)
+     */
+    public void startCancellation(OffsetDateTime sentAt) {
+        if (status != BookingStatus.AWAIT_CONFIRMATION && status != BookingStatus.CONFIRMED) {
+            throw new BusinessException("Невозможно начать отмену из статуса " + status);
+        }
+        this.previousStatus = this.status;
+        this.cancellationSentAt = sentAt;
+        this.status = BookingStatus.CANCELLATION_PENDING;
+    }
+
+    /**
+     * Успешно завершить отмену бронирования
+     */
+    public void completeCancellation() {
+        if (status != BookingStatus.CANCELLATION_PENDING) {
+            throw new BusinessException("Невозможно завершить отмену из статуса " + status);
+        }
+        this.status = BookingStatus.CANCELLED;
+        this.previousStatus = null;
+        this.cancellationSentAt = null;
+    }
+
+    /**
+     * Откатить отмену бронирования при ошибке
+     */
+    public void rollbackCancellation() {
+        if (status != BookingStatus.CANCELLATION_PENDING) {
+            throw new BusinessException("Невозможно откатить отмену из статуса " + status);
+        }
+        if (previousStatus == null) {
+            throw new BusinessException("Невозможно откатить отмену: предыдущий статус не установлен");
+        }
+        this.status = this.previousStatus;
+        this.previousStatus = null;
+        this.cancellationSentAt = null;
     }
 }
