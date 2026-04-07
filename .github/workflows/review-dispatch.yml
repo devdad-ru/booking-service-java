@@ -1,23 +1,21 @@
 name: Dispatch Review
 
 on:
-  pull_request_target:
-    types: [ opened, synchronize ]
+  pull_request:
+    types: [opened, synchronize]
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
     steps:
-      - name: Send dispatch to solutions repo
-        uses: peter-evans/repository-dispatch@v3
-        with:
-          token: ${{ secrets.SOLUTIONS_DISPATCH_TOKEN }}
-          repository: devdad-ru/booking-service-java-solutions
-          event-type: student-pr-review
-          client-payload: |
-            {
-              "pr_number": "${{ github.event.pull_request.number }}",
-              "pr_url": "${{ github.event.pull_request.html_url }}",
+      - name: Request review via relay
+        run: |
+          curl -sf -X POST "https://review-relay.devdad.workers.dev" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "repo": "${{ github.repository }}",
               "branch": "${{ github.event.pull_request.head.ref }}",
-              "repo": "${{ github.event.pull_request.head.repo.full_name }}"
-            }
+              "pr_number": "${{ github.event.pull_request.number }}"
+            }'
+
+          echo "Запрос на ревью отправлен"
