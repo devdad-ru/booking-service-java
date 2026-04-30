@@ -46,4 +46,6 @@
         </createIndex>
     </changeSet>
 
+    <include file="db/changelog/changes/2026-04-30-add-cancellation-fields.xml"/>
+
 </databaseChangeLog>

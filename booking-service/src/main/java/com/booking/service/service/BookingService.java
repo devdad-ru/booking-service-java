@@ -74,7 +74,7 @@ public class BookingService {
                 .orElseThrow(() -> new BusinessException("Бронирование с указанным id: '" + id + "' не найдено."));
 
         LocalDate currentDate = LocalDate.from(dateTimeProvider.utcNow());
-        booking.cancel(currentDate);
+        booking.startCancellation(currentDate, dateTimeProvider.utcNow());
 
         bookingRepository.save(booking);
 
@@ -87,7 +87,7 @@ public class BookingService {
             bookingEventPublisher.publishCancelBookingJob(command);
         }
 
-        log.info("Отменено бронирование с ID: {}", id);
+        log.info("Бронирование переведено в статус ожидания отмены: ID={}", id);
     }
 
     // === ЗАПРОСЫ (Queries) ===
@@ -180,7 +180,8 @@ public class BookingService {
                 booking.getId(), booking.getStatus());
 
         LocalDate currentDate = LocalDate.from(dateTimeProvider.utcNow());
-        booking.cancel(currentDate);
+        booking.startCancellation(currentDate, dateTimeProvider.utcNow());
+        booking.completeCancellation();
         bookingRepository.save(booking);
 
         log.info("Бронирование успешно отменено: id={}, новый статус={}",
@@ -195,5 +196,20 @@ public class BookingService {
     @Transactional
     public void handleError(UUID requestId) {
         log.info("Получено событие ошибки из DLQ: requestId={}", requestId);
+
+        Booking booking = bookingRepository.findByCatalogRequestId(requestId).orElse(null);
+        if (booking == null) {
+            log.warn("Бронирование не найдено по requestId: {}. Ошибка проигнорирована.", requestId);
+            return;
+        }
+
+        log.info("Найдено бронирование: id={}, статус={}. Выполняем rollback отмены...",
+                booking.getId(), booking.getStatus());
+
+        booking.rollbackCancellation();
+        bookingRepository.save(booking);
+
+        log.info("Rollback отмены выполнен: id={}, текущий статус={}",
+                booking.getId(), booking.getStatus());
     }
 }

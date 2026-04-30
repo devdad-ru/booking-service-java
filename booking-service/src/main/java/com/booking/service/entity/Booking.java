@@ -26,6 +26,13 @@ public class Booking {
     @Column(nullable = false)
     private BookingStatus status;
 
+    @Enumerated
+    @Column(name = "previous_status")
+    private BookingStatus previousStatus;
+
+    @Column(name = "cancellation_command_sent_at")
+    private OffsetDateTime cancellationCommandSentAt;
+
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
@@ -99,22 +106,54 @@ public class Booking {
     /**
      * Отменить бронирование с учетом бизнес-правил
      */
-    public void cancel(LocalDate currentDate) {
+    public void startCancellation(LocalDate currentDate, OffsetDateTime commandSentAt) {
         switch (status) {
             case AWAIT_CONFIRMATION:
-                this.status = BookingStatus.CANCELLED;
+                this.previousStatus = this.status;
+                this.status = BookingStatus.CANCELLATION_PENDING;
+                this.cancellationCommandSentAt = commandSentAt;
                 break;
+
             case CONFIRMED:
                 if (currentDate.isBefore(bookedFrom)) {
-                    this.status = BookingStatus.CANCELLED;
+                    this.previousStatus = this.status;
+                    this.status = BookingStatus.CANCELLATION_PENDING;
+                    this.cancellationCommandSentAt = commandSentAt;
                 } else {
                     throw new BusinessException("Невозможно отменить начавшееся бронирование");
                 }
                 break;
+
+            case CANCELLATION_PENDING:
+                throw new BusinessException("Отмена бронирования уже выполняется");
+
             case NONE:
             case CANCELLED:
             default:
                 throw new BusinessException("Некорректный статус для отмены");
         }
+    }
+
+    public void completeCancellation() {
+        if (status != BookingStatus.CANCELLATION_PENDING) {
+            throw new BusinessException("Бронирование не находится в статусе ожидания отмены");
+        }
+
+        this.status = BookingStatus.CANCELLED;
+        this.previousStatus = null;
+    }
+
+    public void rollbackCancellation() {
+        if (status != BookingStatus.CANCELLATION_PENDING) {
+            throw new BusinessException("Бронирование не находится в статусе ожидания отмены");
+        }
+
+        if (previousStatus == null) {
+            throw new BusinessException("Невозможно откатить отмену: предыдущий статус не сохранён");
+        }
+
+        this.status = this.previousStatus;
+        this.previousStatus = null;
+        this.cancellationCommandSentAt = null;
     }
 }
