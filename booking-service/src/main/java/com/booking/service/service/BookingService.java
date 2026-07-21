@@ -1,6 +1,9 @@
 package com.booking.service.service;
 
 import com.booking.service.config.CurrentDateTimeProvider;
+import com.booking.service.dto.response.BookingStatsResponse;
+import com.booking.service.dto.response.BookingStatusStats;
+import com.booking.service.dto.response.ResourceStats;
 import com.booking.service.entity.Booking;
 import com.booking.service.entity.BookingStatus;
 import com.booking.service.exception.BusinessException;
@@ -16,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 
@@ -206,5 +211,64 @@ public class BookingService {
         booking.rollbackCancellation();
 
         bookingRepository.save(booking);
+    }
+
+    @Transactional(readOnly = true)
+    public BookingStatsResponse getStatistics(
+            LocalDate dateFrom,
+            LocalDate dateTo
+    ) {
+        validateDateRange(dateFrom, dateTo);
+
+        OffsetDateTime from = dateFrom
+                .atStartOfDay()
+                .atOffset(ZoneOffset.UTC);
+
+        OffsetDateTime to = dateTo
+                .plusDays(1)
+                .atStartOfDay()
+                .atOffset(ZoneOffset.UTC);
+
+        long totalBookings =
+                bookingRepository.countByCreatedAtBetween(from, to);
+
+        List<BookingStatusStats> byStatus =
+                bookingRepository.countByStatus(from, to)
+                        .stream()
+                        .map(row -> new BookingStatusStats(
+                                (BookingStatus) row[0],
+                                (Long) row[1]
+                        ))
+                        .toList();
+
+        List<ResourceStats> topResources =
+                bookingRepository.countTopResources(
+                                from,
+                                to,
+                                PageRequest.of(0, 5)
+                        )
+                        .stream()
+                        .map(row -> new ResourceStats(
+                                (Long) row[0],
+                                (Long) row[1]
+                        ))
+                        .toList();
+
+        return new BookingStatsResponse(
+                totalBookings,
+                byStatus,
+                topResources
+        );
+    }
+
+    private void validateDateRange(
+            LocalDate dateFrom,
+            LocalDate dateTo
+    ) {
+        if (dateTo.isBefore(dateFrom)) {
+            throw new BusinessException(
+                    "Дата окончания периода не может быть раньше даты начала"
+            );
+        }
     }
 }
