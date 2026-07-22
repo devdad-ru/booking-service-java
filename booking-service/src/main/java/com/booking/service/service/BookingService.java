@@ -2,7 +2,6 @@ package com.booking.service.service;
 
 import com.booking.service.config.CurrentDateTimeProvider;
 import com.booking.service.dto.response.BookingStatsResponse;
-import com.booking.service.dto.response.BookingStatusStats;
 import com.booking.service.dto.response.ResourceStats;
 import com.booking.service.entity.Booking;
 import com.booking.service.entity.BookingStatus;
@@ -237,28 +236,18 @@ public class BookingService {
         long totalBookings =
                 bookingRepository.countByCreatedAtInRange(from, to);
 
-        Map<BookingStatus, Long> statusCounts = new EnumMap<>(BookingStatus.class);
+        Map<BookingStatus, Long> byStatus = new EnumMap<>(BookingStatus.class);
 
-        statusCounts.put(BookingStatus.AWAIT_CONFIRMATION, 0L);
-        statusCounts.put(BookingStatus.CONFIRMED, 0L);
-        statusCounts.put(BookingStatus.CANCELLATION_PENDING, 0L);
-        statusCounts.put(BookingStatus.CANCELLED, 0L);
+        byStatus.put(BookingStatus.AWAIT_CONFIRMATION, 0L);
+        byStatus.put(BookingStatus.CONFIRMED, 0L);
+        byStatus.put(BookingStatus.CANCELLATION_PENDING, 0L);
+        byStatus.put(BookingStatus.CANCELLED, 0L);
 
         bookingRepository.countByStatus(from, to)
-                .forEach(a -> {
-                    BookingStatus status = (BookingStatus) a[0];
-                    Long count = (Long) a[1];
-
-                    statusCounts.put(status, count);
-                });
-
-        List<BookingStatusStats> byStatus = statusCounts.entrySet()
-                .stream()
-                .map(entry -> new BookingStatusStats(
-                        entry.getKey(),
-                        entry.getValue()
-                ))
-                .toList();
+                .forEach(row -> byStatus.put(
+                        (BookingStatus) row[0],
+                        (Long) row[1]
+                ));
 
         List<ResourceStats> topResources =
                 bookingRepository.countTopResources(

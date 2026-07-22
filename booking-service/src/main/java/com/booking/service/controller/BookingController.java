@@ -79,7 +79,7 @@ public class BookingController {
     }
 
     @GetMapping("/statistics")
-    public BookingStatsResponse getStat(
+    public BookingStatsResponse getStatistics(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
     ) {
