@@ -91,6 +91,7 @@ public class BookingService {
             bookingEventPublisher.publishCancelBookingJob(command);
         }
 
+
         log.info("Отменено бронирование с ID: {}", id);
     }
 
