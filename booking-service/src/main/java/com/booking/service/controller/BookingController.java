@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 import com.booking.service.dto.response.BookingStatsResponse;
 import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.List;
 
@@ -78,7 +79,8 @@ public class BookingController {
     }
 
     @GetMapping("/statistics")
-    public BookingStatsResponse getStat(@RequestParam LocalDate dateFrom, @RequestParam LocalDate dateTo
+    public BookingStatsResponse getStat(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+                                        @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo
     ) {
         return bookingService.getStatistics(dateFrom, dateTo);
     }

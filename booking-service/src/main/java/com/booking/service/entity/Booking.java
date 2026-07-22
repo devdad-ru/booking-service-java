@@ -105,24 +105,41 @@ public class Booking {
     /**
      * Отменить бронирование с учетом бизнес-правил
      */
-    public void cancel(OffsetDateTime currentDate) {
-        LocalDate localDateNow = LocalDate.from(currentDate);
+    public void cancel(LocalDate currentDate) {
         switch (status) {
             case AWAIT_CONFIRMATION:
-                processCancellation(currentDate);
+                status = BookingStatus.CANCELLED;
                 break;
 
             case CONFIRMED:
-                if (!localDateNow.isBefore(bookedFrom)) {
+                if (!currentDate.isBefore(bookedFrom)) {
                     throw new BusinessException("Невозможно отменить начавшееся бронирование");
                 }
 
-                processCancellation(currentDate);
+                status = BookingStatus.CANCELLED;
                 break;
 
-            case NONE:
-            case CANCELLED:
-            case CANCELLATION_PENDING:
+            default:
+                throw new BusinessException("Некорректный статус для отмены");
+        }
+    }
+
+    public void startCancellation(OffsetDateTime sentAt) {
+        LocalDate currentDate = sentAt.toLocalDate();
+
+        switch (status) {
+            case AWAIT_CONFIRMATION:
+                processCancellation(sentAt);
+                break;
+
+            case CONFIRMED:
+                if (!currentDate.isBefore(bookedFrom)) {
+                    throw new BusinessException("Невозможно отменить начавшееся бронирование");
+                }
+
+                processCancellation(sentAt);
+                break;
+
             default:
                 throw new BusinessException("Некорректный статус для отмены");
         }
@@ -131,7 +148,7 @@ public class Booking {
     private void processCancellation(OffsetDateTime sentAt) {
         this.previousStatus = this.status;
         this.status = BookingStatus.CANCELLATION_PENDING;
-        this.cancellationRequestedAt = OffsetDateTime.now();
+        this.cancellationRequestedAt = sentAt;
     }
 
     public void completeCancellation() {

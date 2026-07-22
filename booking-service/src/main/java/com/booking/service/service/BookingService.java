@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -78,7 +80,7 @@ public class BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Бронирование с указанным id: '" + id + "' не найдено."));
 
-        booking.cancel(dateTimeProvider.utcNow());
+        booking.startCancellation(dateTimeProvider.utcNow());
 
         bookingRepository.save(booking);
 
@@ -186,7 +188,7 @@ public class BookingService {
                 booking.getId(), booking.getStatus());
 
         OffsetDateTime currentDate = dateTimeProvider.utcNow();
-        booking.cancel(currentDate);
+        booking.cancel(currentDate.toLocalDate());
         bookingRepository.save(booking);
 
         log.info("Бронирование успешно отменено: id={}, новый статус={}",
@@ -213,7 +215,7 @@ public class BookingService {
         booking.rollbackCancellation();
 
         bookingRepository.save(booking);
-        log.info("Получено событие ошибки из DLQ: requestId={}", requestId);
+        log.info("Произошёл успешный откат события: requestId={}, status={}", requestId, booking.getStatus().getValue());
     }
 
     @Transactional(readOnly = true)
@@ -233,16 +235,29 @@ public class BookingService {
                 .atOffset(ZoneOffset.UTC);
 
         long totalBookings =
-                bookingRepository.countByCreatedAtBetween(from, to);
+                bookingRepository.countByCreatedAtInRange(from, to);
 
-        List<BookingStatusStats> byStatus =
-                bookingRepository.countByStatus(from, to)
-                        .stream()
-                        .map(row -> new BookingStatusStats(
-                                (BookingStatus) row[0],
-                                (Long) row[1]
-                        ))
-                        .toList();
+        Map<BookingStatus, Long> statusCounts = new EnumMap<>(BookingStatus.class);
+
+        for (BookingStatus status : BookingStatus.values()) {
+            statusCounts.put(status, 0L);
+        }
+
+        bookingRepository.countByStatus(from, to)
+                .forEach(a -> {
+                    BookingStatus status = (BookingStatus) a[0];
+                    Long count = (Long) a[1];
+
+                    statusCounts.put(status, count);
+                });
+
+        List<BookingStatusStats> byStatus = statusCounts.entrySet()
+                .stream()
+                .map(entry -> new BookingStatusStats(
+                        entry.getKey(),
+                        entry.getValue()
+                ))
+                .toList();
 
         List<ResourceStats> topResources =
                 bookingRepository.countTopResources(

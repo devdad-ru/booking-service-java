@@ -60,7 +60,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         WHERE b.createdAt >= :from
           AND b.createdAt < :to
         """)
-    long countByCreatedAtBetween(
+    long countByCreatedAtInRange(
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to
     );
