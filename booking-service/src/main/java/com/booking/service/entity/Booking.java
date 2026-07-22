@@ -44,6 +44,7 @@ public class Booking {
     @Column(name = "catalog_request_id")
     private UUID catalogRequestId;
 
+    @Enumerated(EnumType.ORDINAL)
     @Column(name = "previous_status")
     private BookingStatus previousStatus;
 

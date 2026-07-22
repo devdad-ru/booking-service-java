@@ -94,7 +94,7 @@ public class BookingService {
         }
 
 
-        log.info("Отменено бронирование с ID: {}", id);
+        log.info("Инициирована отмена бронирования, id=: {}", id);
     }
 
     // === ЗАПРОСЫ (Queries) ===
@@ -187,8 +187,8 @@ public class BookingService {
         log.info("Найдено бронирование: id={}, статус={}. Отменяем...",
                 booking.getId(), booking.getStatus());
 
-        OffsetDateTime currentDate = dateTimeProvider.utcNow();
-        booking.cancel(currentDate.toLocalDate());
+        OffsetDateTime now  = dateTimeProvider.utcNow();
+        booking.cancel(now.toLocalDate());
         bookingRepository.save(booking);
 
         log.info("Бронирование успешно отменено: id={}, новый статус={}",
@@ -239,9 +239,10 @@ public class BookingService {
 
         Map<BookingStatus, Long> statusCounts = new EnumMap<>(BookingStatus.class);
 
-        for (BookingStatus status : BookingStatus.values()) {
-            statusCounts.put(status, 0L);
-        }
+        statusCounts.put(BookingStatus.AWAIT_CONFIRMATION, 0L);
+        statusCounts.put(BookingStatus.CONFIRMED, 0L);
+        statusCounts.put(BookingStatus.CANCELLATION_PENDING, 0L);
+        statusCounts.put(BookingStatus.CANCELLED, 0L);
 
         bookingRepository.countByStatus(from, to)
                 .forEach(a -> {
