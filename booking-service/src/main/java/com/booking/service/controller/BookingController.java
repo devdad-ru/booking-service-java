@@ -77,7 +77,6 @@ public class BookingController {
         bookingService.cancelBooking(id);
     }
 
-
     @GetMapping("/statistics")
     public BookingStatsResponse getStat(@RequestParam LocalDate dateFrom, @RequestParam LocalDate dateTo
     ) {

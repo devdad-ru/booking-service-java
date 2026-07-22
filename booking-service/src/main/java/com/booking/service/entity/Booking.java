@@ -105,18 +105,19 @@ public class Booking {
     /**
      * Отменить бронирование с учетом бизнес-правил
      */
-    public void cancel(LocalDate currentDate) {
+    public void cancel(OffsetDateTime currentDate) {
+        LocalDate localDateNow = LocalDate.from(currentDate);
         switch (status) {
             case AWAIT_CONFIRMATION:
-                processCancellation();
+                processCancellation(currentDate);
                 break;
 
             case CONFIRMED:
-                if (!currentDate.isBefore(bookedFrom)) {
+                if (!localDateNow.isBefore(bookedFrom)) {
                     throw new BusinessException("Невозможно отменить начавшееся бронирование");
                 }
 
-                processCancellation();
+                processCancellation(currentDate);
                 break;
 
             case NONE:
@@ -127,7 +128,7 @@ public class Booking {
         }
     }
 
-    private void processCancellation() {
+    private void processCancellation(OffsetDateTime sentAt) {
         this.previousStatus = this.status;
         this.status = BookingStatus.CANCELLATION_PENDING;
         this.cancellationRequestedAt = OffsetDateTime.now();
@@ -138,6 +139,8 @@ public class Booking {
             throw new BusinessException("Невозможно завершить отмену");
         }
 
+        previousStatus = null;
+        cancellationRequestedAt = null;
         this.status = BookingStatus.CANCELLED;
     }
 

@@ -78,8 +78,7 @@ public class BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Бронирование с указанным id: '" + id + "' не найдено."));
 
-        LocalDate currentDate = LocalDate.from(dateTimeProvider.utcNow());
-        booking.cancel(currentDate);
+        booking.cancel(dateTimeProvider.utcNow());
 
         bookingRepository.save(booking);
 
@@ -158,11 +157,8 @@ public class BookingService {
         log.info("Найдено бронирование: id={}, статус={}. Подтверждаем...",
                 booking.getId(), booking.getStatus());
 
-        if (booking.getStatus() == BookingStatus.CANCELLATION_PENDING) {
-            booking.completeCancellation();
-        } else {
-            booking.confirm();
-        }
+
+        booking.confirm();
         bookingRepository.save(booking);
 
         log.info("Бронирование успешно подтверждено: id={}, новый статус={}",
@@ -188,7 +184,7 @@ public class BookingService {
         log.info("Найдено бронирование: id={}, статус={}. Отменяем...",
                 booking.getId(), booking.getStatus());
 
-        LocalDate currentDate = LocalDate.from(dateTimeProvider.utcNow());
+        OffsetDateTime currentDate = dateTimeProvider.utcNow();
         booking.cancel(currentDate);
         bookingRepository.save(booking);
 
@@ -206,11 +202,17 @@ public class BookingService {
         log.info("Получено событие ошибки из DLQ: requestId={}", requestId);
         Booking booking = bookingRepository
                 .findByCatalogRequestId(requestId)
-                .orElseThrow(() -> new BusinessException("Бронирование с указанным id: '" + requestId + "' не найдено."));
+                .orElse(null);
+
+        if (booking == null) {
+            log.warn("Бронирование не найдено по requestId: {}. Событие проигнорировано.", requestId);
+            return;
+        }
 
         booking.rollbackCancellation();
 
         bookingRepository.save(booking);
+        log.info("Получено событие ошибки из DLQ: requestId={}", requestId);
     }
 
     @Transactional(readOnly = true)
