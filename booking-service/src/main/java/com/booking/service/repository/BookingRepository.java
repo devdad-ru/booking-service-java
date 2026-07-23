@@ -91,4 +91,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
             @Param("from") OffsetDateTime from,
             @Param("to") OffsetDateTime to
     );
+
+    List<Booking> findByStatusAndCancellationRequestedAtBefore(
+            BookingStatus status,
+            OffsetDateTime threshold
+    );
 }

@@ -97,9 +97,20 @@ public class Booking {
      * Подтвердить бронирование (переход из AwaitConfirmation в Confirmed)
      */
     public void confirm() {
-        if (status != BookingStatus.AWAIT_CONFIRMATION) {
-            throw new BusinessException("Статус заявки некорректен, заявка должна быть в статусе " + BookingStatus.AWAIT_CONFIRMATION);
+        switch(status){
+            case AWAIT_CONFIRMATION : break;
+
+            case CANCELLATION_PENDING : {
+                this.cancellationRequestedAt = null;
+                this.previousStatus = null;
+                break;
+            }
+
+            default : throw new BusinessException(
+                    "Статус заявки некорректен, заявка должна быть в статусе " + BookingStatus.AWAIT_CONFIRMATION
+            );
         }
+
         this.status = BookingStatus.CONFIRMED;
     }
 

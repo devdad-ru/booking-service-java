@@ -160,6 +160,13 @@ public class BookingService {
                 booking.getId(), booking.getStatus());
 
 
+        if (booking.getStatus() == BookingStatus.CANCELLATION_PENDING) {
+            log.warn(
+                    "Зафиксировано состояние гонки. Отмена бронирования id={} отложена, Catalog уже подтвердил отмену.",
+                    booking.getId()
+            );
+        }
+
         booking.confirm();
         bookingRepository.save(booking);
 
