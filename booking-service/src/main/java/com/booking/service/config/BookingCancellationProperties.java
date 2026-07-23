@@ -9,5 +9,5 @@ import java.time.Duration;
 @Setter
 @ConfigurationProperties(prefix = "booking.cancellation")
 public class BookingCancellationProperties {
-    private Duration timeout;
+    private Duration timeout = Duration.ofMinutes(5);
 }

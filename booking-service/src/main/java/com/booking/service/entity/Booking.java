@@ -107,7 +107,8 @@ public class Booking {
             }
 
             default : throw new BusinessException(
-                    "Статус заявки некорректен, заявка должна быть в статусе " + BookingStatus.AWAIT_CONFIRMATION
+                    "Статус заявки некорректен, заявка должна быть в статусе " + BookingStatus.AWAIT_CONFIRMATION.name() +
+                            " или " + BookingStatus.CANCELLATION_PENDING.name()
             );
         }
 

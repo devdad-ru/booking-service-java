@@ -162,7 +162,7 @@ public class BookingService {
 
         if (booking.getStatus() == BookingStatus.CANCELLATION_PENDING) {
             log.warn(
-                    "Зафиксировано состояние гонки. Отмена бронирования id={} отложена, Catalog уже подтвердил отмену.",
+                    "Зафиксировано состояние гонки. Отмена бронирования id={} отложена, Catalog подтвердил бронирование.",
                     booking.getId()
             );
         }

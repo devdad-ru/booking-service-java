@@ -26,7 +26,7 @@ public class BookingCancellationRetryScheduler {
     private final CurrentDateTimeProvider dateTimeProvider;
     private final BookingCancellationProperties cancellationProperties;
 
-    @Scheduled(fixedDelayString = "${booking.background.polling.interval}")
+    @Scheduled(fixedDelayString = "${booking.polling.interval}")
     public void retryCancellation() {
         OffsetDateTime threshold =
                 dateTimeProvider.utcNow()
@@ -38,10 +38,24 @@ public class BookingCancellationRetryScheduler {
                         threshold
                 );
 
-        log.info("Найдено {} зависших отмен для повторной отправки", bookings.size());
+        if (bookings.isEmpty()) {
+            log.debug("Зависшие отмены не найдены");
+            return;
+        }
+
+        int sent = 0;
+        int errors = 0;
 
         for (Booking booking : bookings) {
             try {
+                if (booking.getCatalogRequestId() == null) {
+                    log.warn(
+                            "У бронирования с id={} отсутствует catalogRequestId. Повторная отправка отмены пропущена.",
+                            booking.getId()
+                    );
+                    continue;
+                }
+
                 CancelBookingJobByRequestIdRequest command =
                         new CancelBookingJobByRequestIdRequest(
                                 UUID.randomUUID(),
@@ -49,10 +63,12 @@ public class BookingCancellationRetryScheduler {
                         );
 
                 bookingEventPublisher.publishCancelBookingJob(command);
+                sent++;
 
                 log.info("Повторно отправлена команда отмены для бронирования id={}", booking.getId());
 
             } catch (Exception ex) {
+                errors++;
                 log.error(
                         "Ошибка при повторной отправке отмены бронирования id={}",
                         booking.getId(),
@@ -60,5 +76,12 @@ public class BookingCancellationRetryScheduler {
                 );
             }
         }
+        
+        log.info(
+                "Повторная отправка отмен завершена. Найдено: {}, отправлено: {}, ошибок: {}",
+                bookings.size(),
+                sent,
+                errors
+        );
     }
 }
