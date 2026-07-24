@@ -39,6 +39,8 @@ public class BookingService {
     private final BookingEventPublisher bookingEventPublisher;
     private final CurrentDateTimeProvider dateTimeProvider;
 
+    private final BookingHistoryService bookingHistoryService;
+
     // === КОМАНДЫ (Use Cases) ===
 
     /**
@@ -54,6 +56,14 @@ public class BookingService {
         booking.setCatalogRequestId(requestId);
 
         booking = bookingRepository.save(booking);
+
+        bookingHistoryService.saveHistory(
+                booking.getId(),
+                BookingStatus.NONE,
+                booking.getStatus(),
+                "BOOKING_CREATED",
+                booking.getUserId().toString()
+        );
 
         CreateBookingJobRequest command = new CreateBookingJobRequest(
                 UUID.randomUUID(),
@@ -79,9 +89,18 @@ public class BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("Бронирование с указанным id: '" + id + "' не найдено."));
 
+        BookingStatus previousStatus = booking.getStatus();
         booking.startCancellation(dateTimeProvider.utcNow());
 
         bookingRepository.save(booking);
+
+        bookingHistoryService.saveHistory(
+                booking.getId(),
+                previousStatus,
+                booking.getStatus(),
+                "USER_CANCELLATION_REQUEST",
+                booking.getUserId().toString()
+        );
 
         if (booking.getCatalogRequestId() != null) {
             CancelBookingJobByRequestIdRequest command = new CancelBookingJobByRequestIdRequest(
@@ -167,8 +186,17 @@ public class BookingService {
             );
         }
 
+        BookingStatus previousStatus = booking.getStatus();
         booking.confirm();
         bookingRepository.save(booking);
+
+        bookingHistoryService.saveHistory(
+                booking.getId(),
+                previousStatus,
+                booking.getStatus(),
+                "BOOKING_CONFIRMED",
+                "System"
+        );
 
         log.info("Бронирование успешно подтверждено: id={}, новый статус={}",
                 booking.getId(), booking.getStatus());
@@ -193,9 +221,18 @@ public class BookingService {
         log.info("Найдено бронирование: id={}, статус={}. Отменяем...",
                 booking.getId(), booking.getStatus());
 
+        BookingStatus previousStatus = booking.getStatus();
         OffsetDateTime now  = dateTimeProvider.utcNow();
         booking.cancel(now.toLocalDate());
         bookingRepository.save(booking);
+
+        bookingHistoryService.saveHistory(
+                booking.getId(),
+                previousStatus,
+                booking.getStatus(),
+                "BOOKING_DENIED",
+                "System"
+        );
 
         log.info("Бронирование успешно отменено: id={}, новый статус={}",
                 booking.getId(), booking.getStatus());
@@ -218,9 +255,19 @@ public class BookingService {
             return;
         }
 
+        BookingStatus previousStatus = booking.getStatus();
         booking.rollbackCancellation();
 
         bookingRepository.save(booking);
+
+        bookingHistoryService.saveHistory(
+                booking.getId(),
+                previousStatus,
+                booking.getStatus(),
+                "ROLLBACK",
+                "System"
+        );
+
         log.info("Произошёл успешный откат события: requestId={}, status={}", requestId, booking.getStatus().getValue());
     }
 
